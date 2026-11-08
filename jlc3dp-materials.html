@@ -18,18 +18,18 @@ const $=id=>document.getElementById(id);let sortKey='name',direction=1;
 
 function materialValue(d,key){
   if(key!=='tensile')return d.v[key];
-  const entries=[['tx','XY'],['tz','Z'],['tensile','方向不明']]
+  const entries=[['tx','XY'],['tz','Z'],['tensile','']]
     .filter(([field])=>d.v[field])
     .map(([field,label])=>({label,...d.v[field]}));
   if(!entries.length)return null;
   const mean=entries.reduce((sum,v)=>sum+(v.lo+v.hi)/2,0)/entries.length;
   return {
-    text:entries.map(v=>v.label+': '+v.text.replace(/\s*MPa/gi,'')).join('\n'),
-    method:entries.map(v=>v.label+': '+(v.method||'記載なし')).join('\n'),
+    text:entries.map(v=>(v.label?v.label+': ':'')+v.text.replace(/\s*MPa/gi,'')).join('\n'),
+    method:entries.map(v=>(v.label?v.label+': ':'')+(v.method||'記載なし')).join('\n'),
     lo:mean,hi:mean
   };
 }
-explanations.tensile.push('XY・Z・方向不明の値を1列に表示します。並べ替えには各値の中間値の算術平均を使います。例えばXY 34 ± 3、Z 30 ± 4ならソート値は32 MPaです。');
+explanations.tensile.push('引張強度を1列に表示します。XY・Zの記載がある値は方向を併記します。並べ替えには各値の中間値の算術平均を使います。例えばXY 34 ± 3、Z 30 ± 4ならソート値は32 MPaです。');
 function value(c,basis){return c?basis==='mid'?(c.lo+c.hi)/2:c[basis]:null}
 function compare(a,b){if(sortKey==='name')return direction*a.name.localeCompare(b.name);const av=value(materialValue(a,sortKey),$('basis').value),bv=value(materialValue(b,sortKey),$('basis').value);if(av===null)return bv===null?a.name.localeCompare(b.name):1;if(bv===null)return -1;return direction*(av-bv)||a.name.localeCompare(b.name)}
 function render(){const cols=columns.filter(c=>$('view').value==='all'||c[3]===$('view').value);let rows=data.filter(d=>(!$("kind").value||$("kind").value===d.kind)&&(!$("fiber").value||d.name.toUpperCase().includes($("fiber").value))&&(!$('group').value||d.group===$('group').value)&&`${d.name} ${d.tech} ${d.group}`.toLowerCase().includes($('query').value.toLowerCase().trim())).sort(compare);const head=$('table').tHead;head.replaceChildren();const hr=head.insertRow();for(const c of [['name','素材','方式 / 出典'],...cols]){let th=document.createElement('th');th.scope='col';th.setAttribute('aria-sort',sortKey===c[0]?(direction===1?'ascending':'descending'):'none');const b=document.createElement('button');b.textContent=c[1]+' '+(sortKey===c[0]?(direction===1?'↑':'↓'):'↕');const s=document.createElement('span');s.textContent=c[2];b.append(s);b.onclick=()=>{direction=sortKey===c[0]?-direction:1;sortKey=c[0];render()};th.append(b);if(explanations[c[0]]){const help=document.createElement('button');help.className='help';help.textContent='ⓘ '+explanations[c[0]][0];help.setAttribute('aria-label',c[1]+'の説明');help.onclick=()=>showExplanation(c);th.append(help)}hr.append(th)}const body=$('table').tBodies[0];body.replaceChildren();for(const d of rows){const tr=body.insertRow();const td=tr.insertCell();const b=document.createElement('button');b.textContent=d.name;b.onclick=()=>showDetail(d);td.append(b);const sub=document.createElement('small');sub.append(d.kind+' · '+d.tech+' · ');const a=document.createElement('a');a.textContent='公式 ↗';a.href=d.url;a.target='_blank';a.rel='noopener';sub.append(a);td.append(sub);for(const c of cols){let td=tr.insertCell(),v=materialValue(d,c[0]);if(c[0]==='tensile')td.className='tensile-values';td.textContent=v?v.text:'—';if(v)td.title=v.method+' | ソート値 '+value(v,$('basis').value);else td.className='missing'}}if(!rows.length){let td=body.insertRow().insertCell();td.colSpan=cols.length+1;td.textContent='一致する素材はありません。'}$('count').textContent=rows.length+' / '+data.length+' 素材';$('status').textContent=(columns.find(c=>c[0]===sortKey)?.[1]||'素材名')+(sortKey==='tensile'?'（平均）':'')+' '+(direction===1?'昇順 ↑':'降順 ↓')}
