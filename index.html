@@ -3,7 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title></title>
+  <meta name="description" content="公開しているページの一覧。">
+  <title>ページ一覧</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f6f7f9; color: #20252c; font: 16px/1.7 system-ui, -apple-system, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: clamp(48px, 12vh, 112px) 24px; }
+    h1 { margin: 0 0 28px; font-size: 24px; font-weight: 650; letter-spacing: -.03em; }
+    .page { display: flex; align-items: center; gap: 24px; padding: 28px; color: inherit; background: #fff; border: 1px solid #dfe3e8; border-radius: 14px; text-decoration: none; transition: border-color .15s, box-shadow .15s; }
+    .page:hover { border-color: #5c7397; box-shadow: 0 5px 20px #253f6510; }
+    .page:focus-visible { outline: 3px solid #315f9c; outline-offset: 5px; }
+    .content { flex: 1; min-width: 0; }
+    h2 { margin: 0; font-size: 20px; font-weight: 650; }
+    p { margin: 8px 0 0; color: #606a77; font-size: 14px; }
+    .arrow { flex: none; color: #315f9c; font-size: 26px; }
+    @media (max-width: 480px) { .page { padding: 22px; gap: 16px; } h2 { font-size: 18px; } }
+    @media (prefers-reduced-motion: reduce) { .page { transition: none; } }
+  </style>
 </head>
-<body></body>
+<body>
+  <main>
+    <h1>ページ一覧</h1>
+    <a class="page" href="./jlc3dp-materials.html">
+      <div class="content">
+        <h2>3Dプリント素材比較</h2>
+        <p>引張強度・曲げ・衝撃・耐熱性から、素材を比較。</p>
+      </div>
+      <span class="arrow" aria-hidden="true">→</span>
+    </a>
+  </main>
+</body>
 </html>
