@@ -7,62 +7,86 @@
 *{box-sizing:border-box}
 body{margin:0;color:#252525;background:white;font:1rem/1.5 system-ui,sans-serif}
 main{width:min(100% - 40px,540px);margin:clamp(36px,14vh,140px) auto}
-header,form{display:flex;align-items:center;gap:10px}
-header{justify-content:space-between;border-bottom:1px solid #ccc;padding-bottom:16px}
-h1{margin:0;font-size:1.4rem}
+.controls{display:flex;align-items:center;gap:10px}
+article{border-top:1px solid #ccc}article figure{margin:0;height:80px}article .part{height:42px}#restart{margin-top:16px}
+h1{margin:0 0 24px;font-size:1.4rem}
 figure{margin:48px 0;display:grid;place-items:center;height:120px;position:relative}
 figure:before{content:"";position:absolute;left:0;right:0;height:5px;background:#999}
 .part{position:relative;width:64%;height:68px;border-radius:24px;background:#e6cfaa;overflow:hidden}
 .band{position:absolute;top:0;bottom:0;width:7%;border-inline:1px solid #555}
-.band:nth-child(1){left:12%}.band:nth-child(2){left:28%}.band:nth-child(3){left:44%}
+.band:nth-child(1){left:12%}.band:nth-child(2){left:26%}.band:nth-child(3){left:40%}.band:nth-child(4){left:54%}.band:nth-child(5){left:81%}
 input,select,button{font:inherit;color:inherit;border:1px solid #777;border-radius:6px;background:white;height:48px;padding:0 12px}
 input{flex:1;min-width:0}button{background:#252525;color:white;border:0;cursor:pointer}
 label{display:block;margin-bottom:8px}p{min-height:1.5em} :focus-visible{outline:2px solid currentColor;outline-offset:3px}button:focus-visible{outline-color:#444}
 </style>
 <main>
-<header><h1>抵抗値クイズ</h1><span id="progress" aria-live="polite"></span></header>
-<figure id="resistor" role="img"><div class="part"><i class="band"></i><i class="band"></i><i class="band"></i></div></figure>
-<label for="value">抵抗値</label>
-<form><input id="value" aria-describedby="resistor" type="number" inputmode="decimal" min="0" step="any" required><select aria-label="単位"><option value="1">Ω</option><option value="1000">kΩ</option><option value="1000000">MΩ</option></select><button>判定</button></form>
-<p role="status"></p>
+<h1>抵抗値クイズ</h1>
+<section id="home"><p>5本帯の抵抗を読む全10問。答え合わせは最後に。</p><button id="start">開始</button></section>
+<section id="quiz" hidden>
+<p id="progress" aria-live="polite"></p>
+<div id="drawing"></div>
+<form><label for="value">抵抗値</label><div class="controls"><input id="value" aria-describedby="drawing" type="number" inputmode="decimal" min="0" step="any" required><select aria-label="単位"><option value="1">Ω</option><option value="1000">kΩ</option><option value="1000000">MΩ</option></select><button id="submit">次へ</button></div></form>
+</section>
+<section id="results" hidden><h2 id="score" tabindex="-1"></h2><button id="restart">もう一度</button><h2 id="missed-title">間違えた問題</h2><div id="mistakes"></div></section>
+<template id="resistor"><figure role="img"><div class="part"><i class="band"></i><i class="band"></i><i class="band"></i><i class="band"></i><i class="band"></i></div></figure></template>
 </main>
 <script>
+const get=id=>document.getElementById(id);
 const palette=['#171717','#794421','#c52b30','#ef851c','#efcb27','#27824d','#255ba2','#813f95','#888','#fff'];
 const names=['黒','茶','赤','橙','黄','緑','青','紫','灰','白'];
-const form=document.querySelector('form'), input=form.querySelector('input'), unit=form.querySelector('select'), button=form.querySelector('button'), statusText=document.querySelector('[role=status]');
-const values=[10,12,15,18,22,27,33,39,47,56,68,82];
-let round,score,answer,answered,used;
-function formatOhms(ohms){
- if(ohms>=1000000)return ohms/1000000+' MΩ';
- if(ohms>=1000)return ohms/1000+' kΩ';
- return ohms+' Ω';
+const values=[100,121,150,182,221,274,332,392,470,562,681,825];
+const input=get('value'),unit=document.querySelector('select');
+let questions,answers;
+function draw(question){
+ const figure=get('resistor').content.firstElementChild.cloneNode(true);
+ const bands=[...String(question.digits)].map(Number).concat(question.power,1);
+ figure.querySelectorAll('.band').forEach((band,i)=>band.style.background=palette[bands[i]]);
+ figure.setAttribute('aria-label',bands.map(i=>names[i]).join('、'));
+ return figure;
 }
-function start(){round=0;score=0;used=new Set();question()}
-function question(){
- let digits,power;
- do{
-  digits=values[Math.floor(Math.random()*values.length)];
-  power=Math.floor(Math.random()*6);
-  answer=digits*10**power;
- }while(used.has(answer));
- used.add(answer);
- const bands=[Math.floor(digits/10),digits%10,power];
- bands.forEach((color,i)=>document.querySelectorAll('.band')[i].style.background=palette[color]);
- document.querySelector('figure').setAttribute('aria-label',bands.map(i=>names[i]).join('、'));
- document.querySelector('#progress').textContent=++round+' / 10';
- answered=false;input.disabled=unit.disabled=false;input.value='';unit.value='1';button.textContent='判定';statusText.textContent='';
+function start(){
+ const pool=values.flatMap(digits=>Array.from({length:6},(_,power)=>({digits,power})));
+ questions=Array.from({length:10},()=>pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
+ answers=[];
+ get('home').hidden=get('results').hidden=true;
+ get('quiz').hidden=false;
+ showQuestion();
 }
-form.onsubmit=event=>{
+function showQuestion(){
+ get('progress').textContent=(answers.length+1)+' / 10';
+ get('drawing').replaceChildren(draw(questions[answers.length]));
+ get('submit').textContent=answers.length===9?'答え合わせ':'次へ';
+ input.value='';unit.value='1';input.focus();
+}
+function formatOhms(value){
+ if(value>=1000000)return value/1000000+' MΩ';
+ if(value>=1000)return value/1000+' kΩ';
+ return value+' Ω';
+}
+function finish(){
+ const list=get('mistakes');
+ list.replaceChildren();
+ let correct=0;
+ questions.forEach((question,i)=>{
+  const expected=question.digits*10**question.power;
+  if(Math.abs(answers[i].ohms-expected)<1e-8){correct++;return}
+  const item=document.createElement('article');
+  const number=document.createElement('h3');
+  number.textContent='第'+(i+1)+'問';
+  const result=document.createElement('p');
+  result.textContent='回答　'+answers[i].label+'　／　正解　'+formatOhms(expected);
+  item.append(number,draw(question),result);
+  list.append(item);
+ });
+ get('missed-title').hidden=correct===10;
+ get('score').textContent='10問中'+correct+'問正解';
+ get('quiz').hidden=true;get('results').hidden=false;get('score').focus();
+}
+document.querySelector('form').onsubmit=event=>{
  event.preventDefault();
- if(answered){if(round===10)start();else question();input.focus();return}
- const correct=Math.abs(input.valueAsNumber*Number(unit.value)-answer)<1e-8;
- if(correct)score++;
- answered=true;input.disabled=unit.disabled=true;
- statusText.textContent=correct?'正解':'不正解。正解は '+formatOhms(answer);
- if(round===10)statusText.textContent+='　'+'10問中'+score+'問正解';
- button.textContent=round===10?'もう一度':'次の問題';
- button.focus();
+ answers.push({ohms:input.valueAsNumber*Number(unit.value),label:input.value+' '+unit.selectedOptions[0].textContent});
+ if(answers.length===10)finish();else showQuestion();
 };
-start();
+get('start').onclick=get('restart').onclick=start;
 </script>
 </html>
